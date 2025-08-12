@@ -1,69 +1,203 @@
-# React + TypeScript + Vite
+## MedVis3D
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+An in-browser medical volume viewer for NIfTI datasets with 2D and 3D visualization, segmentation overlays, label selection, and performance-aware rendering. All processing happens client‑side.
 
-Currently, two official plugins are available:
+### Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **2D axial slice viewer (VTK)**
+  - Mouse wheel to navigate slices.
+  - Fixed window/level to dataset range; drag interactions for window/level are disabled to avoid accidental changes.
+  - **Overlay support**:
+    - Probabilistic overlay: color by value (turbo colormap), constant opacity with zero kept fully transparent.
+    - Binary/discrete overlay: green mask (values > 0), opacity controlled by slider.
+  - Independent opacity sliders for CT volume and overlay.
+- **3D volume rendering (VTK)**
+  - Volume rendering for CT and segmentation (composite blending).
+  - Optional axial slice plane with optional segmentation overlay on the slice.
+  - Trackball camera interaction for orbit/pan/zoom.
+  - Depth-peeling/translucent ordering tuned for quality (auto-adjusted in performance mode).
+  - Default camera tween to an axial view; Reset restores that exact view.
+- **Segmentation workflows**
+  - Load a segmentation `.nii` or `.nii.gz`, then choose:
+    - **Probabilistic**: scalar values expected in [0, 1] (0 transparent; > 0 visible).
+      - If values look like 0..255 bytes, they are normalized to 0..1.
+    - **Discrete labels**: integer labels (0 assumed background).
+      - Unique labels are extracted (up to 256) and listed; toggle which labels to include.
+      - A binary mask is built from the selected labels.
+  - Segmentation dimensions must match the CT volume.
+- **Controls panel**
+  - Toggle 2D and 3D views independently.
+  - Slice index slider (+ wheel support).
+  - Opacity sliders for 2D/3D volume and 2D/3D overlay.
+  - Toggle the axial slice plane in 3D.
+  - Toggle “Probabilistic label” for the loaded segmentation (reloads using the chosen mode).
+  - “Reset View” resets cameras (2D and 3D) to defaults.
+- **Performance-aware rendering**
+  - “High performance” toggle:
+    - During camera interaction: increases sample distance and reduces render size for smoother motion.
+    - When idle: returns to a high-quality configuration automatically.
+- **Privacy**
+  - Files are processed locally in your browser; nothing is uploaded to a server.
+- **Animated favicon**
+  - A small heart animation plays in the browser tab.
 
-## Expanding the ESLint configuration
+---
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### Supported input and constraints
 
-```js
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+- **Formats**: NIfTI `.nii` and `.nii.gz`.
+- **Volume**
+  - Dimensions and spacing are read from `dims` and `pixDims`.
+  - Window/level is fixed to the dataset’s scalar min/max.
+- **Segmentation**
+  - Must have the exact same grid (dimensions) as the volume; mismatches show an alert.
+  - Two modes:
+    - **Probabilistic**: expected values in [0, 1]; out-of-range values are clamped; byte-like [0..255] normalized to [0..1].
+    - **Discrete labels**: integer labels; 0 is treated as background; other integers treated as separate classes.
+  - In discrete mode, up to 256 unique labels are enumerated and can be toggled to build a binary mask.
 
-      // Remove tseslint.configs.recommended and replace with this
-      ...tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      ...tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      ...tseslint.configs.stylisticTypeChecked,
+Limitations:
+- Orientation matrices (qform/sform) are not applied; data is visualized in native grid order.
+- No resampling is performed; segmentation must already be aligned and on the same grid.
+- DICOM is not supported; convert to NIfTI beforehand.
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+---
+
+### Getting started
+
+- **Requirements**
+  - Node.js 18+ (Node 20 recommended), npm 9+.
+  - A modern desktop browser with WebGL support (Chrome, Edge, Firefox recommended).  Safari not recommended.
+  - GPU acceleration enabled.
+
+- **Install**
+```bash
+npm install
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+- **Run locally**
+```bash
+npm run dev
 ```
+Open the printed local URL in your browser.
+
+- **Build for production**
+```bash
+npm run build
+```
+
+- **Preview the production build**
+```bash
+npm run preview
+```
+
+- **Lint**
+```bash
+npm run lint
+```
+
+---
+
+### Using the app
+
+1. **Load a CT volume**
+   - Click “Load Volume (.nii.gz)” and select a `.nii` or `.nii.gz` file.
+   - The axial slice view appears; scroll the mouse wheel over the 2D view to move through slices.
+
+2. **Load a segmentation (optional)**
+   - Click “Load Segmentation (.nii.gz)” and select the segmentation file.
+   - Choose “Probabilistic (Values in [0, 1])” or “Discrete Labels (Integers)” in the modal, then click “Load”.
+   - If discrete, a list of labels appears in the Controls; toggle labels to include/exclude them from the mask.
+
+3. **Open the Controls**
+   - Click “Show Controls” to reveal the panel:
+     - **Index**: set current slice; you can also use the mouse wheel over the 2D view.
+     - **2D View**:
+       - Volume opacity.
+       - Segmentation opacity (if loaded).
+     - **3D View**:
+       - Volume opacity.
+       - Segmentation opacity (if loaded).
+       - Toggles:
+         - **High performance**: adaptive quality during interaction.
+         - **Slice in 3D**: show the current axial slice plane; if a segmentation is present, an overlaid slice is also shown.
+         - **Probabilistic label**: switch how the segmentation is interpreted; the segmentation file is reloaded in the chosen mode.
+     - **Labels** (discrete only): choose which label indices are visible.
+     - **Reset View**: restores the default cameras (2D and 3D).
+
+4. **Navigate and interact**
+   - **2D**: mouse wheel to change slices. Left-drag window/level is intentionally disabled.
+   - **3D** (trackball camera):
+     - Left-drag: orbit
+     - Right-drag or Ctrl/Cmd-drag: pan
+     - Scroll: zoom
+
+5. **Tips for performance**
+   - Enable “High performance” in Controls.
+   - Hide the 3D view when not needed.
+   - Reduce browser window size.
+   - Prefer moderate volume sizes and avoid extremely large grids.
+
+---
+
+### Visual mapping details
+
+- **Volume (CT)**
+  - 2D slice uses the volume’s scalar range for window/level and a user-set opacity.
+  - 3D uses a grayscale color transfer function with scalar-opacity proportional to volume opacity.
+
+- **Segmentation overlay**
+  - Zero is fully transparent in both 2D and 3D.
+  - Non-zero values:
+    - **Probabilistic**:
+      - Color: turbo colormap as a function of voxel value.
+      - Opacity: globally controlled by the overlay slider; constant for values > 0.
+    - **Discrete (binary mask built from selected labels)**:
+      - Color: green.
+      - Opacity: globally controlled by the overlay slider.
+
+- **3D slice overlays**
+  - If “Slice in 3D” is enabled, the app renders the axial slice with the segmentation overlaid, keeping the overlay slightly offset toward the camera to avoid z-fighting.
+
+---
+
+### Project structure
+
+- `src/App.tsx`: App layout, file upload handlers, state, and feature wiring.
+- `src/components/Volume2DView.tsx`: 2D slice rendering with overlay.
+- `src/components/Volume3DView.tsx`: 3D volume rendering, slice plane, interaction-aware quality.
+- `src/components/Controls.tsx`: UI for slice, opacities, toggles, label selection, reset.
+- `src/utils/nifti.ts`: Read and scale NIfTI, label utilities, normalization helpers.
+- `src/utils/vtkImage.ts`: Convert `VolumeData` to `vtkImageData`.
+- `src/utils/favicon.ts`: Heartbeat favicon animation.
+- `src/types.ts`: Shared types.
+- `index.html`, `src/main.tsx`: App bootstrap.
+
+---
+
+### Troubleshooting
+
+- **“Segmentation dimensions do not match volume.”**
+  - Ensure the segmentation was produced on the exact same grid as the CT volume (same `dims` and `pixDims`).
+- **Nothing shows up / black screen**
+  - Verify WebGL is enabled in your browser.
+  - Try another browser (Chrome or Edge).
+- **Overlay looks wrong**
+  - Confirm you chose the correct mode (Probabilistic vs Discrete).
+  - For discrete, verify expected label indices and toggles.
+- **Orientation appears unexpected**
+  - Orientation matrices are not applied; data is visualized in native grid order.
+- **Very large volumes are slow or crash**
+  - Use the “High performance” toggle, reduce window size, and consider smaller volumes.
+
+---
+
+### Acknowledgements
+
+- **VTK.js** (`@kitware/vtk.js`, `vtk.js`) for rendering.
+- **nifti-reader-js** for NIfTI parsing.
+- **pako** for gzip decompression.
+- **React** and **Vite** for the web app framework and tooling.
+- Additional deps in `package.json`.
+
+---
