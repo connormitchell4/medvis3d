@@ -30,6 +30,11 @@ function App() {
   const [uniqueLabels, setUniqueLabels] = useState<number[]>([]);
   const [selectedLabels, setSelectedLabels] = useState<Set<number>>(new Set());
 
+  // Segmentation type prompt (modal)
+  const [segPromptOpen, setSegPromptOpen] = useState(false);
+  const [pendingSegFile, setPendingSegFile] = useState<File | null>(null);
+  const [pendingSegIsProb, setPendingSegIsProb] = useState<boolean>(true);
+
   // Lighting controls
   // Fixed lights now; no interactive lighting controls
 
@@ -139,17 +144,15 @@ function App() {
                 type="file"
                 accept=".nii,.nii.gz,application/gzip"
                 onChange={(e) => {
-                  const f = e.target.files?.[0];
+                  const f = e.target.files?.[0] ?? null;
                   if (f) {
-                    const isProb = (document.getElementById('probSeg') as HTMLInputElement)?.checked;
-                    handleSegUpload(f, Boolean(isProb));
+                    setPendingSegFile(f);
+                    setPendingSegIsProb(true);
+                    setSegPromptOpen(true);
                   }
                 }}
                 style={{ display: 'none' }}
               />
-            </label>
-            <label className="checkbox">
-              <input id="probSeg" type="checkbox" /> Probabilistic label
             </label>
           </div>
           <button className="btn" onClick={() => setControlsOpen((v) => !v)}>
@@ -157,8 +160,7 @@ function App() {
           </button>
         </div>
       </header>
-      {controlsOpen && (
-        <div className="controls-dropdown">
+      <div className={`controls-dropdown ${controlsOpen ? 'open' : ''}`}>
           <Controls
             sliceIndex={sliceIndex}
             setSliceIndex={setSliceIndex}
@@ -180,12 +182,65 @@ function App() {
             resetView={() => setResetToken((t) => t + 1)}
             hasSeg={Boolean(vtkOverlay)}
             isProbabilistic={segIsProb}
+            setIsProbabilistic={(v) => {
+              // If toggled to probabilistic, reload as prob; if toggled off, reload as discrete
+              setSegIsProb(v);
+              if (!segFile) return;
+              handleSegUpload(segFile, v);
+            }}
             uniqueLabels={uniqueLabels}
             selectedLabels={selectedLabels}
             toggleLabel={handleToggleLabel}
             highPerf3D={highPerf3D}
             setHighPerf3D={setHighPerf3D}
           />
+      </div>
+      {segPromptOpen && (
+        <div className="modal-overlay" onClick={() => setSegPromptOpen(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-title">Segmentation Type</div>
+            <div className="modal-body">
+              <div className="modal-row">
+                <label>
+                  <input
+                    type="radio"
+                    name="segtype"
+                    checked={pendingSegIsProb}
+                    onChange={() => setPendingSegIsProb(true)}
+                  /> Probabilistic (Values in [0, 1])
+                </label>
+              </div>
+              <div className="modal-row">
+                <label>
+                  <input
+                    type="radio"
+                    name="segtype"
+                    checked={!pendingSegIsProb}
+                    onChange={() => setPendingSegIsProb(false)}
+                  /> Discrete Labels (Integers)
+                </label>
+              </div>
+            </div>
+            <div className="modal-actions">
+              <button
+                className="btn"
+                onClick={async () => {
+                  if (!pendingSegFile) return;
+                  const file = pendingSegFile;
+                  setSegPromptOpen(false);
+                  setPendingSegFile(null);
+                  await handleSegUpload(file, pendingSegIsProb);
+                }}
+              >Load</button>
+              <button
+                className="btn"
+                onClick={() => {
+                  setSegPromptOpen(false);
+                  setPendingSegFile(null);
+                }}
+              >Cancel</button>
+            </div>
+          </div>
         </div>
       )}
       <div className="main">
