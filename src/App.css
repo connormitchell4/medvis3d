@@ -1,0 +1,94 @@
+:root {
+  --site-bg: #7b776f;       /* website background */
+  --ct-bg: #7b776f;         /* viewport background */
+  --title: #f6f4f1;         /* title text */
+  --subtext: #e4e2dd;       /* subtext */
+  --text: #e4e2dd;          /* default text */
+  --panel: #000000;         /* panels/bars */
+  --border: #7b776f;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  color: var(--text);
+  background: var(--site-bg);
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 36px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+}
+.brand { color: var(--title); font-weight: 700; letter-spacing: 0.2px; font-size: 2rem; border-radius: 6px; padding: 6px 10px; }
+.uploads {
+  display: flex;
+  gap: 12px;
+}
+.btn {
+  display: inline-block;
+  background: var(--ct-bg);
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--title);
+  border: 1px solid var(--border);
+}
+.checkbox {
+  margin-left: 8px;
+  font-size: 0.9rem;
+  color: var(--subtext);
+}
+
+.main { display: block; flex: 1; min-height: 0; }
+.views {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr;
+  gap: 0;
+  padding: 0;
+  height: calc(100vh - 56px);
+}
+.view {
+  background: var(--ct-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  height: 100%;
+}
+.controls-dropdown {
+  position: absolute;
+  top: 56px;
+  right: 12px;
+  max-width: 380px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  z-index: 20;
+}
+
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.controls .section-title { color: var(--title); font-weight: 600; }
+.controls .divider { height: 1px; background: var(--border); opacity: 0.8; margin: 4px 0 8px; }
+.controls .row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.controls label { min-width: 90px; color: var(--subtext); }
+.controls input[type="range"] {
+  flex: 1;
+}
+.controls .toggles, .controls .labels {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
