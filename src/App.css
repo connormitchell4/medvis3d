@@ -44,15 +44,17 @@
   color: var(--subtext);
 }
 
-.main { display: block; flex: 1; min-height: 0; }
+.main { display: flex; flex-direction: column; flex: 1; min-height: 0; }
 .views {
   display: grid;
   grid-template-columns: 1fr 1fr;
   grid-template-rows: 1fr;
   gap: 0;
   padding: 0;
-  height: calc(100vh - 56px);
+  flex: 1;
+  min-height: 0;
 }
+.views > .view { min-height: 0; }
 .view {
   background: var(--ct-bg);
   border: 1px solid var(--border);

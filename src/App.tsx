@@ -1,11 +1,12 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import './App.css';
 import Controls from './components/Controls';
 import Volume2DView from './components/Volume2DView';
-import Volume3DView from './components/Volume3DView';
+import Volume3DView, { type Volume3DViewHandle } from './components/Volume3DView';
 import { loadNiftiFromFile, buildBinaryMask, clamp01Array, extractUniqueLabels } from './utils/nifti';
 import { createVtkImageFromVolume } from './utils/vtkImage';
 import vtkImageData from '@kitware/vtk.js/Common/DataModel/ImageData';
+import RecordingPanel from './components/RecordingPanel';
 
 function App() {
   const [segFile, setSegFile] = useState<File | null>(null);
@@ -117,11 +118,14 @@ function App() {
 
   const overlayColormap = segIsProb ? 'prob' : 'binary' as const;
   const [controlsOpen, setControlsOpen] = useState(false);
+  const [recorderOpen, setRecorderOpen] = useState(false);
+
+  const view3DRef = useRef<Volume3DViewHandle | null>(null);
 
   return (
     <div className="app">
       <header className="topbar">
-        <div className="brand">MedVis3D</div>
+        <div className="brand">WebMedVis3D</div>
         <div className="uploads">
           <div className="upload">
             <label className="btn">
@@ -193,6 +197,8 @@ function App() {
             toggleLabel={handleToggleLabel}
             highPerf3D={highPerf3D}
             setHighPerf3D={setHighPerf3D}
+            recorderOpen={recorderOpen}
+            onToggleRecorder={() => setRecorderOpen((v) => !v)}
           />
       </div>
       {segPromptOpen && (
@@ -244,7 +250,7 @@ function App() {
         </div>
       )}
       <div className="main">
-        <section className="views">
+        <section className="views" style={{ paddingBottom: recorderOpen ? 220 : 0 }}>
           <div className="view" style={{ display: show2D ? 'block' : 'none' }}>
             <Volume2DView
               volumeImage={vtkVolume}
@@ -259,6 +265,7 @@ function App() {
           </div>
           <div className="view" style={{ display: show3D ? 'block' : 'none' }}>
             <Volume3DView
+              ref={view3DRef}
               volumeImage={vtkVolume}
               overlayImage={vtkOverlay}
               overlayColormap={overlayColormap}
@@ -274,6 +281,17 @@ function App() {
             />
           </div>
         </section>
+        <RecordingPanel
+          isOpen={recorderOpen}
+          onClose={() => setRecorderOpen(false)}
+          getCameraPose={() => view3DRef.current?.getCameraPose() ?? null}
+          setCameraPose={(p) => view3DRef.current?.setCameraPose(p)}
+          captureRGBA={(opts) => view3DRef.current!.captureRGBA(opts)}
+          applyQualityMode={() => view3DRef.current?.applyQualityMode?.()}
+          getSliceIndex={() => sliceIndex}
+          setSliceIndex={setSliceIndex}
+          maxSlice={maxSlice}
+        />
       </div>
     </div>
   );

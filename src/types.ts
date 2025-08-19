@@ -19,4 +19,17 @@ export interface SegmentationInfo {
   uniqueLabels: number[]; // for discrete labels (excluding 0)
 }
 
+export interface CameraPose {
+  position: Vector3;
+  focalPoint: Vector3;
+  viewUp: Vector3;
+  viewAngle: number; // degrees
+}
+
+export interface Keyframe {
+  timeSec: number; // timeline time in seconds
+  camera: CameraPose;
+  sliceIndex: number;
+}
+
 

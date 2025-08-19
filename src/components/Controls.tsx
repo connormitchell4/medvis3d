@@ -33,6 +33,9 @@ type Props = {
 
   highPerf3D: boolean;
   setHighPerf3D: (v: boolean) => void;
+
+  recorderOpen?: boolean;
+  onToggleRecorder?: () => void;
 };
 
 export default function Controls({
@@ -62,6 +65,8 @@ export default function Controls({
   toggleLabel,
   highPerf3D,
   setHighPerf3D,
+  recorderOpen,
+  onToggleRecorder,
 }: Props) {
   const clampedMax = Math.max(0, maxSlice);
   const labels = useMemo(() => uniqueLabels.slice(0, 64), [uniqueLabels]);
@@ -185,6 +190,7 @@ export default function Controls({
           <div className="divider" />
           <div style={{ display: 'flex', gap: 8, width: '100%', justifyContent: 'center' }}>
             <button className="btn" onClick={resetView}>Reset View</button>
+            <button className="btn" onClick={onToggleRecorder}>{recorderOpen ? 'Close Recorder' : 'Open Recorder'}</button>
           </div>
         </div>
       </div>

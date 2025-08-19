@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
 import vtkGenericRenderWindow from '@kitware/vtk.js/Rendering/Misc/GenericRenderWindow';
 import vtkRenderer from '@kitware/vtk.js/Rendering/Core/Renderer';
 import vtkInteractorStyleTrackballCamera from '@kitware/vtk.js/Interaction/Style/InteractorStyleTrackballCamera';
@@ -11,6 +11,7 @@ import vtkImageSlice from '@kitware/vtk.js/Rendering/Core/ImageSlice';
 import vtkImageData from '@kitware/vtk.js/Common/DataModel/ImageData';
 import vtkPlane from '@kitware/vtk.js/Common/DataModel/Plane';
 import vtkLight from '@kitware/vtk.js/Rendering/Core/Light';
+import type { CameraPose } from '../types';
 
 type Props = {
   volumeImage?: vtkImageData | null;
@@ -27,7 +28,14 @@ type Props = {
   highPerf3D: boolean;
 };
 
-export default function Volume3DView({
+export type Volume3DViewHandle = {
+  getCameraPose: () => CameraPose | null;
+  setCameraPose: (pose: CameraPose) => void;
+  captureRGBA: (opts: { width: number; height: number }) => Promise<{ width: number; height: number; rgba: Uint8ClampedArray }>;
+  applyQualityMode: () => void;
+};
+
+const Volume3DView = forwardRef<Volume3DViewHandle, Props>(function Volume3DView({
   volumeImage,
   overlayImage,
   overlayColormap,
@@ -38,7 +46,7 @@ export default function Volume3DView({
   resetToken,
   showSlice3D,
   highPerf3D,
-}: Props) {
+}: Props, ref) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const grwRef = useRef<vtkGenericRenderWindow | null>(null);
   const rendererRef = useRef<vtkRenderer | null>(null);
@@ -150,6 +158,81 @@ export default function Volume3DView({
     } catch {}
     grwRef.current?.getRenderWindow().render();
   }
+
+  useImperativeHandle(ref, () => ({
+    getCameraPose: () => {
+      const renderer = rendererRef.current;
+      if (!renderer) return null;
+      const cam = renderer.getActiveCamera();
+      return {
+        position: cam.getPosition() as [number, number, number],
+        focalPoint: cam.getFocalPoint() as [number, number, number],
+        viewUp: cam.getViewUp() as [number, number, number],
+        viewAngle: cam.getViewAngle?.() ?? 30,
+      };
+    },
+    setCameraPose: (pose: CameraPose) => {
+      const renderer = rendererRef.current;
+      const grw = grwRef.current;
+      if (!renderer || !grw) return;
+      const cam = renderer.getActiveCamera();
+      cam.setPosition(...pose.position);
+      cam.setFocalPoint(...pose.focalPoint);
+      cam.setViewUp(...pose.viewUp);
+      if ((cam as any).setViewAngle && typeof pose.viewAngle === 'number') {
+        (cam as any).setViewAngle(pose.viewAngle);
+      }
+      renderer.resetCameraClippingRange();
+      grw.getRenderWindow().render();
+    },
+    applyQualityMode: () => {
+      applySettingsForMode('quality');
+    },
+    captureRGBA: async ({ width, height }: { width: number; height: number }) => {
+      const grwAny = grwRef.current as any;
+      const grw = grwRef.current;
+      const renderer = rendererRef.current;
+      if (!grwAny || !grw || !renderer) throw new Error('Renderer not ready');
+      let glrw = grwAny.getOpenGLRenderWindow?.();
+      if (!glrw) {
+        const rwAny = grw.getRenderWindow() as any;
+        const views = rwAny?.getViews?.();
+        if (Array.isArray(views) && views.length > 0) {
+          glrw = views[0];
+        }
+      }
+      const canvas: HTMLCanvasElement | undefined = glrw?.getCanvas?.() ?? (containerRef.current?.querySelector('canvas') as HTMLCanvasElement | null) ?? undefined;
+      if (!glrw && !canvas) throw new Error('OpenGLRenderWindow not available');
+      const prevSize = glrw?.getSize?.();
+      const prevWidth = prevSize?.[0] ?? canvas?.width ?? 1;
+      const prevHeight = prevSize?.[1] ?? canvas?.height ?? 1;
+      try {
+        if (glrw?.setSize) {
+          glrw.setSize(width, height);
+          renderer.resetCameraClippingRange();
+          grw.getRenderWindow().render();
+        } else {
+          // Fall back: render at current size and scale via 2D draw
+          grw.getRenderWindow().render();
+        }
+        // Read back via 2D draw to avoid readPixels/flip headaches
+        const off = document.createElement('canvas');
+        off.width = width;
+        off.height = height;
+        const ctx2d = off.getContext('2d');
+        if (!ctx2d) throw new Error('2D context unavailable');
+        if (!canvas) throw new Error('Canvas unavailable');
+        ctx2d.drawImage(canvas, 0, 0, width, height);
+        const img = ctx2d.getImageData(0, 0, width, height);
+        return { width, height, rgba: img.data };
+      } finally {
+        if (glrw?.setSize) {
+          glrw.setSize(prevWidth, prevHeight);
+          grw.getRenderWindow().render();
+        }
+      }
+    },
+  }), []);
 
   function applyDefaultCameraFacingAxial() {
     const renderer = rendererRef.current;
@@ -692,7 +775,9 @@ export default function Volume3DView({
       <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
     </div>
   );
-}
+});
+
+export default Volume3DView;
 
 function getWorldZAtSlice(image: vtkImageData | null | undefined, k: number): number | null {
   if (!image) return null;

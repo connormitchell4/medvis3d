@@ -12,6 +12,7 @@
   "dependencies": {
     "@kitware/vtk.js": "^34.7.0",
     "heatmap.js": "^2.0.5",
+    "jszip": "^3.10.1",
     "nifti-reader-js": "^0.8.0",
     "pako": "^2.1.0",
     "react": "^19.1.1",
