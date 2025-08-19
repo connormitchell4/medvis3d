@@ -1,4 +1,4 @@
-## [MedVis3D](https://medvis3d.web.app/)
+## [WebMedVis3D](https://medvis3d.web.app/)
 
 An in-browser medical volume and segmentation viewer for NIfTI datasets with 2D and 3D visualization, probabilistic & binary segmentation overlays, label selection, and performance-aware rendering. All processing happens client‑side.
 
