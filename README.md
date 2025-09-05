@@ -17,7 +17,7 @@ An in-browser medical volume and segmentation viewer for NIfTI datasets with 2D 
   - Trackball camera interaction for orbit/pan/zoom.
   - Depth-peeling/translucent ordering tuned for quality (auto-adjusted in performance mode).
   - Default camera tween to an axial view; Reset restores that exact view.
-- **Segmentation workflows**
+- **Segmentation rendering**
   - Load a segmentation `.nii` or `.nii.gz`, then choose:
     - **Probabilistic**: scalar values expected in [0, 1] (0 transparent; > 0 visible).
       - If values look like 0..255 bytes, they are normalized to 0..1.
@@ -32,6 +32,10 @@ An in-browser medical volume and segmentation viewer for NIfTI datasets with 2D 
   - Toggle the axial slice plane in 3D.
   - Toggle “Probabilistic label” for the loaded segmentation (reloads using the chosen mode).
   - “Reset View” resets cameras (2D and 3D) to defaults.
+- **Recording Panel**
+  - Create keyframe-based camera and slice animations.
+  - Render the camera view as it moves through keyframes as a series of frames.
+  - Use for generating beautiful 3D movie renderings of segmentations and volumes.
 - **Performance-aware rendering**
   - “High performance” toggle:
     - During camera interaction: increases sample distance and reduces render size for smoother motion.
@@ -137,6 +141,29 @@ npm run lint
    - Hide the 3D view when not needed.
    - Reduce browser window size.
    - Prefer moderate volume sizes and avoid extremely large grids.
+
+---
+
+### Recording panel
+
+Create keyframe-based camera and slice animations and export frames to disk.
+
+- Open: In `Controls`, click `Open Recorder` to toggle the panel at the bottom.
+- Set up: Choose FPS, Duration, and Resolution, then click `Choose Folder`.
+  - Uses the File System Access API; requires Chrome or Edge on desktop. Unsupported browsers will show an alert.
+- Keyframes:
+  - Scrub the timeline (drag or mouse wheel), then position the 3D camera and slice and click `Set Keyframe`.
+  - Drag the diamond markers to retime keyframes. `Go` jumps to a keyframe; `Del` removes it.
+- Record: Click `Record` to save a numbered TGA image sequence (`frame_00000.tga`, `frame_00001.tga`, …) into the selected folder. Alpha is preserved.
+- Make a video (optional):
+  - Example with ffmpeg:
+    ```bash
+    ffmpeg -framerate 30 -i frame_%05d.tga -pix_fmt yuv420p -crf 18 out.mp4
+    ```
+
+Notes:
+- Frames are written directly to disk to keep memory usage low.
+- Large resolutions or long durations will produce many files; ensure sufficient disk space.
 
 ---
 
