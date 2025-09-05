@@ -84,4 +84,19 @@ We acknowledge the open-source projects that enable this work: VTK.js [@vtkjs] f
 
 ## References
 
+- Fedorov, A., Beichel, R., Kalpathy-Cramer, J., Finet, J., Fillion-Robin, J.-C., Pujol, S., Bauer, C., Jennings, D., Fennessy, F., Sonka, M., Buatti, J., Aylward, S., Miller, J. V., Pieper, S., & Kikinis, R. (2012). 3D Slicer as an image computing platform for the quantitative imaging network. *Magnetic Resonance Imaging*, 30(9), 1323–1341. https://doi.org/10.1016/j.mri.2012.05.001
+
+- Yushkevich, P. A., Piven, J., Hazlett, H. C., Smith, R. G., Ho, S., Gee, J. C., & Gerig, G. (2006). User-guided 3D active contour segmentation of anatomical structures: significantly improved efficiency and reliability. *NeuroImage*, 31(3), 1116–1128. https://doi.org/10.1016/j.neuroimage.2006.01.015
+
+- Kitware. (2024). VTK.js. GitHub repository. https://github.com/Kitware/vtk-js
+
+- RII-MANGO. (2024). nifti-reader-js. GitHub repository. https://github.com/rii-mango/NIFTI-Reader-JS
+
+- nodeca. (2024). pako: zlib port to JavaScript. GitHub repository. https://github.com/nodeca/pako
+
+- Meta Platforms, Inc. (2024). React: A JavaScript library for building user interfaces. GitHub repository. https://github.com/facebook/react
+
+- Evan You and Vite Contributors. (2024). Vite. GitHub repository. https://github.com/vitejs/vite
+
+- Deutsch, P. (1996). GZIP file format specification version 4.3. RFC 1952. https://www.rfc-editor.org/rfc/rfc1952
 
