@@ -53,14 +53,19 @@ Below are short animations and screenshots showcasing the UI and rendering capab
 
 #### Screenshots
 
+---
+
 **2D and 3D slice viewers with probabilistic segmentation overlay of the intestinal tract.  Cool values (values closer to blue) represent probabilities close to 0, warm values (closer to red) represent values closer to 1**
 ![2D slice viewer with probabilistic segmentation overlay](public/paper-assets/web1.png)
+---
 **2D and 3D viewports of kidney segmentations**
 ![3D volume rendering with segmentation and axial slice plane](public/paper-assets/web2.png)
-
+---
 #### Animations
 **3D videos generated with the recorder**
+---
 ![Demo 1](public/paper-assets/frame1.gif)
+---
 ![Demo 2](public/paper-assets/frame2.gif)
 
 ---
