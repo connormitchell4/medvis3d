@@ -52,25 +52,27 @@ An in-browser medical volume and segmentation viewer for NIfTI datasets with 2D 
 Below are short animations and screenshots showcasing the UI and rendering capabilities. Assets live under `public/paper-assets/` so they work locally and on the web.
 
 ---
+
 ![Figure 1: 2D and 3D slice viewers with probabilistic segmentation overlay of the intestinal tract. Cooler (blue) values indicate probabilities near 0; warmer (red) values indicate probabilities near 1.](public/paper-assets/web1.png)
 
 _Figure 1: 2D and 3D slice viewers with probabilistic segmentation overlay of the intestinal tract. Cooler (blue) values indicate probabilities near 0; warmer (red) values indicate probabilities near 1._
----
+
 ![Figure 2: 3D volume rendering with segmentation and an axial slice plane; kidney segmentations.](public/paper-assets/web2.png)
 
 _Figure 2: 3D volume rendering with segmentation and an axial slice plane; kidney segmentations._
----
+
 ![Figure 3: Probabilistic intestinal tract segmentation; cooler (blue) values near 0 and warmer (red) values near 1.](public/paper-assets/frame1.gif)
 
 _Figure 3: Probabilistic intestinal tract segmentation; cooler (blue) values near 0 and warmer (red) values near 1._
----
+
 ![Figure 4: Binary label for a liver segmentation.](public/paper-assets/frame2.gif)
 
 _Figure 4: Binary label for a liver segmentation._
----
+
 ![Figure 5: Binary label showing the intestinal tract in a coronal view. Red: colon (large intestine); blue: small intestine; green: duodenum.](public/paper-assets/frame3.gif)
 
 _Figure 5: Binary label showing the intestinal tract in a coronal view. Red: colon (large intestine); blue: small intestine; green: duodenum._
+
 ---
 
 ### Supported input and constraints
