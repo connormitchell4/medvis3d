@@ -60,9 +60,8 @@ Below are short animations and screenshots showcasing the UI and rendering capab
 
 #### Animations
 **3D videos generated with the recorder**
-<video src="https://github.com/connormitchell4/medvis3d/blob/4e63f0dfb0ae89f97d48fc667dec145c6a10fc76/public/paper-assets/frame1.webm" autoplay loop muted playsinline width="500"></video>
-
-<video src="https://github.com/connormitchell4/medvis3d/blob/4e63f0dfb0ae89f97d48fc667dec145c6a10fc76/public/paper-assets/frame2.webm" autoplay loop muted playsinline width="500"></video>
+![Demo 1](public/paper-assets/frame1.gif)
+![Demo 2](public/paper-assets/frame2.gif)
 
 ---
 
