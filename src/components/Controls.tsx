@@ -4,6 +4,8 @@ type Props = {
   sliceIndex: number;
   setSliceIndex: (n: number) => void;
   maxSlice: number;
+  sliceAxis: 'I' | 'J' | 'K';
+  setSliceAxis: (a: 'I' | 'J' | 'K') => void;
 
   volumeOpacity2D: number;
   setVolumeOpacity2D: (v: number) => void;
@@ -42,6 +44,8 @@ export default function Controls({
   sliceIndex,
   setSliceIndex,
   maxSlice,
+  sliceAxis,
+  setSliceAxis,
   volumeOpacity2D,
   setVolumeOpacity2D,
   overlayOpacity2D,
@@ -101,6 +105,13 @@ export default function Controls({
   return (
     <div className="controls">
       <div className="section-title" style={{ fontSize: '1.4rem', textAlign: 'center' }}>Controls</div>
+      <div className="divider" />
+      <div className="row" style={{ gap: 12, alignItems: 'center' }}>
+        <label>Orientation</label>
+        <label><input type="radio" name="ori" checked={sliceAxis==='K'} onChange={() => setSliceAxis('K')} /> Axial</label>
+        <label><input type="radio" name="ori" checked={sliceAxis==='J'} onChange={() => setSliceAxis('J')} /> Coronal</label>
+        <label><input type="radio" name="ori" checked={sliceAxis==='I'} onChange={() => setSliceAxis('I')} /> Sagittal</label>
+      </div>
       <div className="divider" />
       <div className="row">
         <label>Index</label>

@@ -129,6 +129,19 @@ export function buildBinaryMask(
   return out;
 }
 
+export function buildMaskedLabels(
+  labelsArray: ArrayLike<number>,
+  selectedLabels: Set<number>,
+): Float32Array {
+  // Preserve label indices where selected, set others to 0
+  const out = new Float32Array(labelsArray.length);
+  for (let i = 0; i < labelsArray.length; i += 1) {
+    const v = Math.max(0, Math.round(labelsArray[i] as number));
+    out[i] = selectedLabels.has(v) ? v : 0;
+  }
+  return out;
+}
+
 export function clamp01Array(array: ArrayLike<number>): Float32Array {
   const out = new Float32Array(array.length);
   for (let i = 0; i < array.length; i += 1) {

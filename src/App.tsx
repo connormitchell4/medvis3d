@@ -3,7 +3,7 @@ import './App.css';
 import Controls from './components/Controls';
 import Volume2DView from './components/Volume2DView';
 import Volume3DView, { type Volume3DViewHandle } from './components/Volume3DView';
-import { loadNiftiFromFile, buildBinaryMask, clamp01Array, extractUniqueLabels } from './utils/nifti';
+import { loadNiftiFromFile, clamp01Array, extractUniqueLabels, buildMaskedLabels } from './utils/nifti';
 import { createVtkImageFromVolume } from './utils/vtkImage';
 import vtkImageData from '@kitware/vtk.js/Common/DataModel/ImageData';
 import RecordingPanel from './components/RecordingPanel';
@@ -17,6 +17,7 @@ function App() {
 
   const [sliceIndex, setSliceIndex] = useState(0);
   const [maxSlice, setMaxSlice] = useState(0);
+  const [sliceAxis, setSliceAxis] = useState<'I'|'J'|'K'>('K');
   const [show2D, setShow2D] = useState(true);
   const [show3D, setShow3D] = useState(true);
   const [resetToken, setResetToken] = useState(0);
@@ -44,9 +45,10 @@ function App() {
     const loaded = await loadNiftiFromFile(file);
     const vtkImage = createVtkImageFromVolume(loaded.data);
     setVtkVolume(vtkImage);
-    const nz = loaded.data.dimensions[2];
-    setMaxSlice(nz - 1);
-    setSliceIndex(Math.floor(nz / 2));
+    const dims = loaded.data.dimensions;
+    const axisIndex = sliceAxis === 'I' ? 0 : sliceAxis === 'J' ? 1 : 2;
+    setMaxSlice(dims[axisIndex] - 1);
+    setSliceIndex(Math.floor(dims[axisIndex] / 2));
     setResetToken((t) => t + 1);
   }
 
@@ -76,7 +78,8 @@ function App() {
       setUniqueLabels(labels);
       const initial = new Set(labels);
       setSelectedLabels(initial);
-      segArray = buildBinaryMask(loaded.data.scalarData as any, initial);
+      // Preserve label indices so we can color per-label
+      segArray = buildMaskedLabels(loaded.data.scalarData as any, initial);
     }
 
     const overlayVtk = createVtkImageFromVolume({
@@ -94,7 +97,7 @@ function App() {
     if (!segFile || segIsProb) return;
     (async () => {
       const loaded = await loadNiftiFromFile(segFile);
-      const segArray = buildBinaryMask(loaded.data.scalarData as any, selectedLabels);
+      const segArray = buildMaskedLabels(loaded.data.scalarData as any, selectedLabels);
       const overlayVtk = createVtkImageFromVolume({
         ...loaded.data,
         scalarData: segArray,
@@ -116,7 +119,7 @@ function App() {
 
   const maxSliceComputed = useMemo(() => maxSlice, [maxSlice]);
 
-  const overlayColormap = segIsProb ? 'prob' : 'binary' as const;
+  const overlayColormap = segIsProb ? 'prob' : 'labels' as const;
   const [controlsOpen, setControlsOpen] = useState(false);
   const [recorderOpen, setRecorderOpen] = useState(false);
 
@@ -169,6 +172,16 @@ function App() {
             sliceIndex={sliceIndex}
             setSliceIndex={setSliceIndex}
             maxSlice={maxSliceComputed}
+            sliceAxis={sliceAxis}
+            setSliceAxis={(a) => {
+              setSliceAxis(a);
+              const dims = vtkVolume?.getDimensions?.();
+              if (dims) {
+                const axisIndex = a === 'I' ? 0 : a === 'J' ? 1 : 2;
+                setMaxSlice(dims[axisIndex] - 1);
+                setSliceIndex(Math.floor(dims[axisIndex] / 2));
+              }
+            }}
             volumeOpacity2D={volumeOpacity2D}
             setVolumeOpacity2D={setVolumeOpacity2D}
             overlayOpacity2D={overlayOpacity2D}
@@ -258,6 +271,7 @@ function App() {
               show={show2D}
               sliceIndex={sliceIndex}
               onSliceIndexChange={setSliceIndex}
+              sliceAxis={sliceAxis}
               volumeOpacity={Math.min(1, Math.max(0, volumeOpacity2D))}
               overlayOpacity={Math.min(1, Math.max(0, overlayOpacity2D))}
               overlayColormap={overlayColormap}
@@ -273,6 +287,7 @@ function App() {
               volumeOpacity={Math.min(1, Math.max(0, volumeOpacity3D))}
               overlayOpacity={Math.min(1, Math.max(0, overlayOpacity3D))}
               sliceIndex={sliceIndex}
+              sliceAxis={sliceAxis}
               resetToken={resetToken}
               sliceCTOpacity={Math.min(1, Math.max(0, volumeOpacity2D))}
               sliceSegOpacity={Math.min(1, Math.max(0, overlayOpacity2D))}

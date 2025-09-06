@@ -12,15 +12,17 @@ import vtkImageData from '@kitware/vtk.js/Common/DataModel/ImageData';
 import vtkPlane from '@kitware/vtk.js/Common/DataModel/Plane';
 import vtkLight from '@kitware/vtk.js/Rendering/Core/Light';
 import type { CameraPose } from '../types';
+import { downsampleImageData } from '../utils/vtkImage';
 
 type Props = {
   volumeImage?: vtkImageData | null;
   overlayImage?: vtkImageData | null; // probability [0..1] or binary mask
-  overlayColormap: 'prob' | 'binary';
+  overlayColormap: 'prob' | 'binary' | 'labels';
   show: boolean;
   volumeOpacity: number;
   overlayOpacity: number;
   sliceIndex: number; // for clipping + slice plane
+  sliceAxis: 'I' | 'J' | 'K';
   resetToken: number; // increment to trigger reset
   sliceCTOpacity: number; // opacity for the 2D CT slice actor shown in 3D view
   sliceSegOpacity: number; // opacity for the 2D seg overlay on the slice in 3D view
@@ -43,6 +45,7 @@ const Volume3DView = forwardRef<Volume3DViewHandle, Props>(function Volume3DView
   volumeOpacity,
   overlayOpacity,
   sliceIndex,
+  sliceAxis,
   resetToken,
   showSlice3D,
   highPerf3D,
@@ -150,7 +153,10 @@ const Volume3DView = forwardRef<Volume3DViewHandle, Props>(function Volume3DView
       const grwAny = grwRef.current as any;
       const glrw = grwAny?.getOpenGLRenderWindow?.();
       if (glrw && containerRef.current) {
-        const scale = mode === 'highPerfInteraction' ? 0.75 : 1.0;
+        let scale = 1.0;
+        if (highPerfRef.current) {
+          scale = mode === 'highPerfInteraction' ? 0.4 : (mode === 'highPerfStill' ? 0.6 : 1.0);
+        }
         const w = Math.max(1, Math.floor(containerRef.current.clientWidth * scale));
         const h = Math.max(1, Math.floor(containerRef.current.clientHeight * scale));
         glrw.setSize(w, h);
@@ -234,7 +240,7 @@ const Volume3DView = forwardRef<Volume3DViewHandle, Props>(function Volume3DView
     },
   }), []);
 
-  function applyDefaultCameraFacingAxial() {
+  function applyDefaultCameraFacingSliceAxis(axis: 'I'|'J'|'K') {
     const renderer = rendererRef.current;
     const grw = grwRef.current;
     if (!renderer || !grw) return;
@@ -246,11 +252,17 @@ const Volume3DView = forwardRef<Volume3DViewHandle, Props>(function Volume3DView
     const cz = (b[4] + b[5]) / 2;
 
     const cam = renderer.getActiveCamera();
-    const target = {
-      focalPoint: [-cx, cy, cz] as [number, number, number],
-      position: [-cx, 90, cz * 2] as [number, number, number],
-      viewUp: [0, 1, 0] as [number, number, number],
-    };
+    let target: { focalPoint: [number, number, number]; position: [number, number, number]; viewUp: [number, number, number] };
+    if (axis === 'K') {
+      // Axial: look from +Y
+      target = { focalPoint: [-cx, cy, cz], position: [-cx, 90, cz * 2], viewUp: [0, 1, 0] };
+    } else if (axis === 'J') {
+      // Coronal: look from +Z
+      target = { focalPoint: [-cx, cy, cz], position: [-cx, cy,  cz + 200], viewUp: [0, 1, 0] };
+    } else {
+      // Sagittal: look from +X
+      target = { focalPoint: [-cx, cy, cz], position: [ -cx - 200, cy, cz], viewUp: [0, 1, 0] };
+    }
 
     // If already close, snap
     const curFP = cam.getFocalPoint() as number[];
@@ -425,9 +437,9 @@ const Volume3DView = forwardRef<Volume3DViewHandle, Props>(function Volume3DView
       (renderer as any).setOcclusionRatio?.(s.occlusionRatio);
     } catch {}
     grw.getRenderWindow().render();
-    // Position camera to face axial slice by default
-    applyDefaultCameraFacingAxial();
-  }, [volumeImage]);
+    // Position camera to face selected slice axis by default
+    applyDefaultCameraFacingSliceAxis(sliceAxis);
+  }, [volumeImage, sliceAxis]);
 
   // Overlay volume setup
   useEffect(() => {
@@ -446,8 +458,13 @@ const Volume3DView = forwardRef<Volume3DViewHandle, Props>(function Volume3DView
       return;
     }
 
+    // If highPerf3D is enabled, use a downsampled version of the overlay to reduce ray-marching cost
+    const inputForOverlay = highPerf3D
+      ? downsampleImageData(overlayImage, [2, 2, 2], overlayColormap === 'prob' ? 'average' : 'mode')
+      : overlayImage;
+
     const mapper = vtkVolumeMapper.newInstance();
-    mapper.setInputData(overlayImage);
+    mapper.setInputData(inputForOverlay);
     mapper.setBlendModeToComposite();
     {
       const mode: RenderMode = highPerf3D ? 'highPerfStill' : 'quality';
@@ -463,24 +480,47 @@ const Volume3DView = forwardRef<Volume3DViewHandle, Props>(function Volume3DView
     const cfun = vtkColorTransferFunction.newInstance();
     if (overlayColormap === 'prob') {
       applyTurboFromTable(cfun, turbo_colormap_data);
-    } else {
+    } else if (overlayColormap === 'binary') {
       cfun.addRGBPoint(0.0, 0, 0, 0);
       cfun.addRGBPoint(1.0, 0, 1, 0); // green
+    } else {
+      // labels mode: categorical palette per integer label 1..N
+      cfun.addRGBPoint(0, 0, 0, 0);
+      const palette: [number, number, number][] = [
+        [0.894, 0.102, 0.110],
+        [0.216, 0.494, 0.722],
+        [0.302, 0.686, 0.290],
+        [0.596, 0.306, 0.639],
+        [1.000, 0.498, 0.0  ],
+        [1.000, 0.894, 0.184],
+        [0.651, 0.337, 0.157],
+        [0.969, 0.506, 0.749],
+        [0.600, 0.600, 0.600],
+        [0.121, 0.470, 0.705],
+      ];
+      const maxLabel = 255;
+      for (let label = 1; label <= maxLabel; label += 1) {
+        const c = palette[(label - 1) % palette.length];
+        cfun.addRGBPoint(label, c[0], c[1], c[2]);
+      }
     }
     // For probabilistic overlays, color by value; opacity is constant for >0 with 0 kept transparent
     const ofun = vtkPiecewiseFunction.newInstance();
     const globalAlpha = Math.min(1, Math.max(0, overlayOpacity));
     const eps = 1e-4;
     ofun.addPoint(0.0, 0.0);
-    ofun.addPoint(eps, globalAlpha);
-    ofun.addPoint(1.0, globalAlpha);
+    if (overlayColormap === 'prob') {
+      ofun.addPoint(eps, globalAlpha);
+      ofun.addPoint(1.0, globalAlpha);
+    } else if (overlayColormap === 'binary') {
+      ofun.addPoint(1.0, globalAlpha);
+    } else {
+      ofun.addPoint(eps, globalAlpha);
+      ofun.addPoint(255.0, globalAlpha);
+    }
     property.setRGBTransferFunction(0, cfun);
     (property as any).setUseLookupTableScalarRange?.(true);
     property.setScalarOpacity(0, ofun);
-    // Interpolation: make overlay crisp in quality mode
-    if (!highPerf3D) {
-      property.setInterpolationTypeToNearest();
-    } else {
     // Interpolation: make overlay crisp in quality mode
     if (!highPerf3D) {
       property.setInterpolationTypeToNearest();
@@ -490,7 +530,6 @@ const Volume3DView = forwardRef<Volume3DViewHandle, Props>(function Volume3DView
       } else {
         property.setInterpolationTypeToNearest();
       }
-    }
     }
     // Shading: off for crisp labels in quality (no lighting blur); on during interaction only
     {
@@ -508,7 +547,7 @@ const Volume3DView = forwardRef<Volume3DViewHandle, Props>(function Volume3DView
     property.setSpecular(0.3);
     property.setSpecularPower(8.0);
     grw.getRenderWindow().render();
-  }, [overlayImage, overlayColormap]);
+  }, [overlayImage, overlayColormap, highPerf3D, sliceAxis]);
   
   // Apply settings on toggle change
   useEffect(() => {
@@ -604,7 +643,8 @@ const Volume3DView = forwardRef<Volume3DViewHandle, Props>(function Volume3DView
     }
     const mapper = vtkImageMapper.newInstance();
     mapper.setInputData(volumeImage);
-    mapper.setSlicingMode(vtkImageMapper.SlicingMode.K);
+    const mode = sliceAxis === 'I' ? vtkImageMapper.SlicingMode.I : sliceAxis === 'J' ? vtkImageMapper.SlicingMode.J : vtkImageMapper.SlicingMode.K;
+    mapper.setSlicingMode(mode);
     mapper.setSlice(sliceIndex);
     sliceMapperRef.current = mapper;
 
@@ -627,26 +667,53 @@ const Volume3DView = forwardRef<Volume3DViewHandle, Props>(function Volume3DView
     if (overlayImage) {
       const omapper = vtkImageMapper.newInstance();
       omapper.setInputData(overlayImage);
-      omapper.setSlicingMode(vtkImageMapper.SlicingMode.K);
+      const mode = sliceAxis === 'I' ? vtkImageMapper.SlicingMode.I : sliceAxis === 'J' ? vtkImageMapper.SlicingMode.J : vtkImageMapper.SlicingMode.K;
+      omapper.setSlicingMode(mode);
       omapper.setSlice(sliceIndex);
       overlaySliceMapperRef.current = omapper;
 
       const oactor = vtkImageSlice.newInstance();
       oactor.setMapper(omapper);
       const oprop = oactor.getProperty();
-    const cfun = vtkColorTransferFunction.newInstance();
-    if (overlayColormap === 'prob') {
-      applyTurboFromTable(cfun, turbo_colormap_data);
-    } else {
+      const cfun = vtkColorTransferFunction.newInstance();
+      if (overlayColormap === 'prob') {
+        applyTurboFromTable(cfun, turbo_colormap_data);
+      } else if (overlayColormap === 'binary') {
         cfun.addRGBPoint(0.0, 0, 0, 0);
         cfun.addRGBPoint(1.0, 0, 1, 0);
+      } else {
+        cfun.addRGBPoint(0, 0, 0, 0);
+        const palette: [number, number, number][] = [
+          [0.894, 0.102, 0.110],
+          [0.216, 0.494, 0.722],
+          [0.302, 0.686, 0.290],
+          [0.596, 0.306, 0.639],
+          [1.000, 0.498, 0.0  ],
+          [1.000, 0.894, 0.184],
+          [0.651, 0.337, 0.157],
+          [0.969, 0.506, 0.749],
+          [0.600, 0.600, 0.600],
+          [0.121, 0.470, 0.705],
+        ];
+        const maxLabel = 255;
+        for (let label = 1; label <= maxLabel; label += 1) {
+          const c = palette[(label - 1) % palette.length];
+          cfun.addRGBPoint(label, c[0], c[1], c[2]);
+        }
       }
       const ofun = vtkPiecewiseFunction.newInstance();
-      const segAlpha = Math.min(1, Math.max(0, 4 *overlayOpacity));
+      const segAlpha = Math.min(1, Math.max(0, 4 * overlayOpacity));
       const alphaEps = 1e-4;
       ofun.addPoint(0.0, 0.0);
-      ofun.addPoint(alphaEps, segAlpha);
-      ofun.addPoint(1.0, segAlpha);
+      if (overlayColormap === 'prob') {
+        ofun.addPoint(alphaEps, segAlpha);
+        ofun.addPoint(1.0, segAlpha);
+      } else if (overlayColormap === 'binary') {
+        ofun.addPoint(1.0, segAlpha);
+      } else {
+        ofun.addPoint(alphaEps, segAlpha);
+        ofun.addPoint(255.0, segAlpha);
+      }
       oprop.setRGBTransferFunction(0, cfun);
       // Ensure TF range [0..1] is respected for color mapping
       (oprop as any).setUseLookupTableScalarRange?.(true);
@@ -670,7 +737,7 @@ const Volume3DView = forwardRef<Volume3DViewHandle, Props>(function Volume3DView
       oactor.setScale(-1, 1, 1);
     }
     grw.getRenderWindow().render();
-  }, [volumeImage, overlayImage, overlayColormap, overlayOpacity, showSlice3D]);
+  }, [volumeImage, overlayImage, overlayColormap, overlayOpacity, showSlice3D, sliceAxis]);
 
   // Keep slice index in sync for slice actor
   useEffect(() => {
@@ -682,15 +749,20 @@ const Volume3DView = forwardRef<Volume3DViewHandle, Props>(function Volume3DView
   // Clipping plane synced with slice index
   useEffect(() => {
     const baseImage = volumeImage ?? overlayImage;
-    const zWorld = getWorldZAtSlice(baseImage, sliceIndex);
-    if (zWorld == null) return;
+    const world = getWorldCoordAtSlice(baseImage, sliceIndex, sliceAxis);
+    if (world == null) return;
     if (!clippingPlaneRef.current) {
       clippingPlaneRef.current = vtkPlane.newInstance();
     }
     const plane = clippingPlaneRef.current;
-    // Keep z >= zWorld (normal points +Z). This avoids fully clipping at low slices.
-    plane.setOrigin(0, 0, zWorld);
-    plane.setNormal(0, 0, 1);
+    // Set plane origin/normal by axis through the dataset center to avoid degenerate offsets
+    const bds = baseImage?.getBounds?.();
+    const cx = bds ? (bds[0] + bds[1]) / 2 : 0;
+    const cy = bds ? (bds[2] + bds[3]) / 2 : 0;
+    const cz = bds ? (bds[4] + bds[5]) / 2 : 0;
+    if (sliceAxis === 'K') { plane.setOrigin(cx, cy, world); plane.setNormal(0, 0, 1); }
+    else if (sliceAxis === 'J') { plane.setOrigin(cx, world, cz); plane.setNormal(0, 1, 0); }
+    else { plane.setOrigin(-world, cy, cz); plane.setNormal(-1, 0, 0); }
     if (volumeMapperRef.current) {
       volumeMapperRef.current.removeAllClippingPlanes();
       volumeMapperRef.current.addClippingPlane(plane);
@@ -700,7 +772,7 @@ const Volume3DView = forwardRef<Volume3DViewHandle, Props>(function Volume3DView
       overlayMapperRef.current.addClippingPlane(plane);
     }
     grwRef.current?.getRenderWindow().render();
-  }, [sliceIndex, volumeImage, overlayImage]);
+  }, [sliceIndex, sliceAxis, volumeImage, overlayImage]);
 
   // Keep overlay slice slightly in front of CT slice along camera view
   useEffect(() => {
@@ -766,8 +838,8 @@ const Volume3DView = forwardRef<Volume3DViewHandle, Props>(function Volume3DView
   useEffect(() => {
     if (!resetToken) return;
     // Apply the exact same default camera pose as on load (no intermediate reset)
-    applyDefaultCameraFacingAxial();
-    applyDefaultCameraFacingAxial();
+    applyDefaultCameraFacingSliceAxis(sliceAxis);
+    applyDefaultCameraFacingSliceAxis(sliceAxis);
   }, [resetToken]);
 
   return (
@@ -779,13 +851,14 @@ const Volume3DView = forwardRef<Volume3DViewHandle, Props>(function Volume3DView
 
 export default Volume3DView;
 
-function getWorldZAtSlice(image: vtkImageData | null | undefined, k: number): number | null {
+function getWorldCoordAtSlice(image: vtkImageData | null | undefined, idx: number, axis: 'I'|'J'|'K'): number | null {
   if (!image) return null;
-  const [,, nz] = image.getDimensions();
-  const [,, sz] = image.getSpacing();
-  const [,, oz] = image.getOrigin();
-  const kk = Math.min(Math.max(k, 0), nz - 1);
-  return oz + kk * sz;
+  const [nx, ny, nz] = image.getDimensions();
+  const [sx, sy, sz] = image.getSpacing();
+  const [ox, oy, oz] = image.getOrigin();
+  if (axis === 'K') { const k = Math.min(Math.max(idx, 0), nz - 1); return oz + k * sz; }
+  if (axis === 'J') { const j = Math.min(Math.max(idx, 0), ny - 1); return oy + j * sy; }
+  const i = Math.min(Math.max(idx, 0), nx - 1); return ox + i * sx;
 }
 
 

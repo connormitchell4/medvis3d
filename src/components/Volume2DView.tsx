@@ -14,9 +14,10 @@ type Props = {
   show: boolean;
   sliceIndex: number;
   onSliceIndexChange: (n: number) => void;
+  sliceAxis: 'I' | 'J' | 'K';
   volumeOpacity: number; // 0..1 applied to CT slice
   overlayOpacity: number; // 0..1 applied to overlay slice
-  overlayColormap: 'prob' | 'binary';
+  overlayColormap: 'prob' | 'binary' | 'labels';
   resetToken?: number;
 };
 
@@ -26,6 +27,7 @@ export default function Volume2DView({
   show,
   sliceIndex,
   onSliceIndexChange,
+  sliceAxis,
   volumeOpacity,
   overlayOpacity,
   overlayColormap,
@@ -51,13 +53,34 @@ export default function Volume2DView({
     }
   }
   
-  function makeOverlayRGBTF(mode: 'prob' | 'binary') {
+  function makeOverlayRGBTF(mode: 'prob' | 'binary' | 'labels') {
     const tf = vtkColorTransferFunction.newInstance();
     if (mode === 'prob') {
         applyTurboFromTable(tf, turbo_colormap_data);
-    } else {
+    } else if (mode === 'binary') {
         tf.addRGBPoint(0.0, 0, 0, 0);
         tf.addRGBPoint(1.0, 0, 1, 0); // binary on => green
+    } else {
+        // Categorical palette for integer labels 1..N
+        const palette: [number, number, number][] = [
+          [0.894, 0.102, 0.110], // red
+          [0.216, 0.494, 0.722], // blue
+          [0.302, 0.686, 0.290], // green
+          [0.596, 0.306, 0.639], // purple
+          [1.000, 0.498, 0.0  ], // orange
+          [1.000, 0.894, 0.184], // yellow
+          [0.651, 0.337, 0.157], // brown
+          [0.969, 0.506, 0.749], // pink
+          [0.600, 0.600, 0.600], // gray
+          [0.121, 0.470, 0.705], // alt blue
+        ];
+        // Map 0 -> transparent black, 1..K -> palette entries
+        tf.addRGBPoint(0, 0, 0, 0);
+        const maxLabel = 255; // reasonable cap
+        for (let label = 1; label <= maxLabel; label += 1) {
+          const c = palette[(label - 1) % palette.length];
+          tf.addRGBPoint(label, c[0], c[1], c[2]);
+        }
     }
     return tf;
   }
@@ -107,16 +130,18 @@ export default function Volume2DView({
     if (!elem || !volumeImage) return;
     const handler = (e: WheelEvent) => {
       e.preventDefault();
-      const [, , nz] = volumeImage.getDimensions();
+      const dims = volumeImage.getDimensions();
+      const axisIndex = sliceAxis === 'I' ? 0 : sliceAxis === 'J' ? 1 : 2;
+      const maxIdx = dims[axisIndex] - 1;
       const delta = e.deltaY > 0 ? 1 : -1;
-      const next = Math.min(Math.max(sliceIndex + delta, 0), nz - 1);
+      const next = Math.min(Math.max(sliceIndex + delta, 0), maxIdx);
       if (next !== sliceIndex) onSliceIndexChange(next);
     };
     elem.addEventListener('wheel', handler, { passive: false });
     return () => {
       elem.removeEventListener('wheel', handler as any);
     };
-  }, [volumeImage, sliceIndex, onSliceIndexChange]);
+  }, [volumeImage, sliceIndex, onSliceIndexChange, sliceAxis]);
 
   // Disable window/level mouse interaction in 2D (left-drag)
   useEffect(() => {
@@ -154,7 +179,8 @@ export default function Volume2DView({
     }
     const mapper = vtkImageMapper.newInstance();
     mapper.setInputData(volumeImage);
-    mapper.setSlicingMode(vtkImageMapper.SlicingMode.K);
+    const mode = sliceAxis === 'I' ? vtkImageMapper.SlicingMode.I : sliceAxis === 'J' ? vtkImageMapper.SlicingMode.J : vtkImageMapper.SlicingMode.K;
+    mapper.setSlicingMode(mode);
     mapper.setSlice(sliceIndex);
     mapperRef.current = mapper;
 
@@ -172,18 +198,41 @@ export default function Volume2DView({
 
     volumeSliceRef.current = actor;
     renderer.addViewProp(actor);
-    renderer.resetCamera();
-    // Fit to viewport by adjusting parallel scale and camera so image fills view
+    // Position camera to face the selected slice axis and fit
     const camera = renderer.getActiveCamera();
     const dims = volumeImage.getDimensions();
     const spacing = volumeImage.getSpacing();
-    const width = dims[0] * spacing[0];
-    const height = dims[1] * spacing[1];
+    const origin = volumeImage.getOrigin();
+    const cx = origin[0] + (dims[0] * spacing[0]) / 2;
+    const cy = origin[1] + (dims[1] * spacing[1]) / 2;
+    const cz = origin[2] + (dims[2] * spacing[2]) / 2;
+    const worldI = origin[0] + sliceIndex * spacing[0];
+    const worldJ = origin[1] + sliceIndex * spacing[1];
+    const worldK = origin[2] + sliceIndex * spacing[2];
+    // Fit to viewport by adjusting parallel scale
+    const ijk = sliceAxis;
+    const wIndex = ijk === 'I' ? 1 : 0;
+    const hIndex = ijk === 'K' ? 1 : 2;
+    const width = dims[wIndex] * spacing[wIndex];
+    const height = dims[hIndex] * spacing[hIndex];
     const maxDim = Math.max(width, height);
     camera.setParallelProjection(true);
     camera.setParallelScale(maxDim * 0.5);
+    if (sliceAxis === 'K') {
+      camera.setFocalPoint(cx, cy, worldK);
+      camera.setPosition(cx, cy, worldK + 500);
+      camera.setViewUp(0, 1, 0);
+    } else if (sliceAxis === 'J') {
+      camera.setFocalPoint(cx, worldJ, cz);
+      camera.setPosition(cx, worldJ + 500, cz);
+      camera.setViewUp(0, 0, 1);
+    } else {
+      camera.setFocalPoint(worldI, cy, cz);
+      camera.setPosition(worldI + 500, cy, cz);
+      camera.setViewUp(0, 0, 1);
+    }
     grwRef.current.getRenderWindow().render();
-  }, [volumeImage]);
+  }, [volumeImage, sliceAxis, sliceIndex]);
 
   // Set up overlay slice actor
   useEffect(() => {
@@ -200,21 +249,29 @@ export default function Volume2DView({
     }
     const mapper = vtkImageMapper.newInstance();
     mapper.setInputData(overlayImage);
-    mapper.setSlicingMode(vtkImageMapper.SlicingMode.K);
+    const mode = sliceAxis === 'I' ? vtkImageMapper.SlicingMode.I : sliceAxis === 'J' ? vtkImageMapper.SlicingMode.J : vtkImageMapper.SlicingMode.K;
+    mapper.setSlicingMode(mode);
     mapper.setSlice(sliceIndex);
     overlayMapperRef.current = mapper;
 
     const actor = vtkImageSlice.newInstance();
     actor.setMapper(mapper);
     const property = actor.getProperty();
-    // Probabilistic: opacity driven by voxel value (0..1). Binary: use slider.
+    // Probabilistic: opacity driven by voxel value (0..1). Binary/labels: use slider with 0 kept transparent
     const opacityTF = vtkPiecewiseFunction.newInstance();
     const globalAlpha = Math.min(1, Math.max(0, overlayOpacity));
     const eps = 1e-4;
-    // Keep 0 fully transparent so CT shows through. Values > 0 show with uniform opacity.
     opacityTF.addPoint(0.0, 0.0);
-    opacityTF.addPoint(eps, globalAlpha);
-    opacityTF.addPoint(1.0, globalAlpha);
+    if (overlayColormap === 'prob') {
+      opacityTF.addPoint(eps, globalAlpha);
+      opacityTF.addPoint(1.0, globalAlpha);
+    } else if (overlayColormap === 'binary') {
+      opacityTF.addPoint(1.0, globalAlpha);
+    } else {
+      // labels: treat any positive integer label as same opacity
+      opacityTF.addPoint(eps, globalAlpha);
+      opacityTF.addPoint(255.0, globalAlpha);
+    }
     property.setOpacity(globalAlpha);
     property.setRGBTransferFunction(0, makeOverlayRGBTF(overlayColormap));
     property.setScalarOpacity(0, opacityTF);
@@ -224,7 +281,7 @@ export default function Volume2DView({
     overlaySliceRef.current = actor;
     renderer.addViewProp(actor);
     grwRef.current.getRenderWindow().render();
-  }, [overlayImage, overlayColormap]);
+  }, [overlayImage, overlayColormap, sliceAxis]);
 
   // Keep slice index in sync
   useEffect(() => {
