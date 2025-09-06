@@ -51,18 +51,18 @@ An in-browser medical volume and segmentation viewer for NIfTI datasets with 2D 
 
 Below are short animations and screenshots showcasing the UI and rendering capabilities. Assets live under `public/paper-assets/` so they work locally and on the web.
 
-#### Animations
-
-<video src="public/paper-assets/frame1.webm" autoplay loop muted playsinline width="500"></video>
-
-<video src="public/paper-assets/frame2.webm" autoplay loop muted playsinline width="500"></video>
-
-
 #### Screenshots
 
+**2D and 3D slice viewers with probabilistic segmentation overlay of the intestinal tract.  Cool values (values closer to blue) represent probabilities close to 0, warm values (closer to red) represent values closer to 1**
 ![2D slice viewer with probabilistic segmentation overlay](public/paper-assets/web1.png)
-
+**2D and 3D viewports of kidney segmentations**
 ![3D volume rendering with segmentation and axial slice plane](public/paper-assets/web2.png)
+
+#### Animations
+**3D videos generated with the recorder**
+<video src="https://github.com/connormitchell4/medvis3d/blob/4e63f0dfb0ae89f97d48fc667dec145c6a10fc76/public/paper-assets/frame1.webm" autoplay loop muted playsinline width="500"></video>
+
+<video src="https://github.com/connormitchell4/medvis3d/blob/4e63f0dfb0ae89f97d48fc667dec145c6a10fc76/public/paper-assets/frame2.webm" autoplay loop muted playsinline width="500"></video>
 
 ---
 
