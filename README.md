@@ -53,9 +53,10 @@ Below are short animations and screenshots showcasing the UI and rendering capab
 
 #### Animations
 
-![Animated 3D camera orbit with axial slice overlay](public/paper-assets/frame1.gif)
+<video src="public/paper-assets/frame1.webm" autoplay loop muted playsinline width="500"></video>
 
-![Animated axial slice sweep in the 2D view](public/paper-assets/frame2.gif)
+<video src="public/paper-assets/frame2.webm" autoplay loop muted playsinline width="500"></video>
+
 
 #### Screenshots
 
