@@ -59,19 +59,24 @@ Key capabilities include:
 
 # Figures
 
-![Figure 1: 2D and 3D slice viewers with probabilistic segmentation overlay of the intestinal tract. Cooler (blue) values indicate probabilities near 0; warmer (red) values indicate probabilities near 1.](public/paper-assets/web1.png){#fig:ui-2d width=80%}
+![Figure 1: 2D and 3D slice viewers with probabilistic segmentation overlay of the intestinal tract. Cooler (blue) values indicate probabilities near 0; warmer (red) values indicate probabilities near 1.](public/paper-assets/web1.png)
+
 _Figure 1: 2D and 3D slice viewers with probabilistic segmentation overlay of the intestinal tract. Cooler (blue) values indicate probabilities near 0; warmer (red) values indicate probabilities near 1._
 
-![Figure 2: 3D volume rendering with segmentation and an axial slice plane; kidney segmentations.](public/paper-assets/web2.png){#fig:ui-3d width=80%}
+![Figure 2: 3D volume rendering with segmentation and an axial slice plane; kidney segmentations.](public/paper-assets/web2.png)
+
 _Figure 2: 3D volume rendering with segmentation and an axial slice plane; kidney segmentations._
 
-![Figure 3: Probabilistic intestinal tract segmentation; cooler (blue) values near 0 and warmer (red) values near 1.](public/paper-assets/frame1.gif){#fig:demo-prob width=80%}
+![Figure 3: Probabilistic intestinal tract segmentation; cooler (blue) values near 0 and warmer (red) values near 1.](public/paper-assets/frame1.gif)
+
 _Figure 3: Probabilistic intestinal tract segmentation; cooler (blue) values near 0 and warmer (red) values near 1._
 
-![Figure 4: Binary label for a liver segmentation.](public/paper-assets/frame2.gif){#fig:demo-liver width=80%}
+![Figure 4: Binary label for a liver segmentation.](public/paper-assets/frame2.gif)
+
 _Figure 4: Binary label for a liver segmentation._
 
-![Figure 5: Binary label showing the intestinal tract in a coronal view. Red: colon (large intestine); blue: small intestine; green: duodenum.](public/paper-assets/frame3.gif){#fig:demo-coronal width=80%}
+![Figure 5: Binary label showing the intestinal tract in a coronal view. Red: colon (large intestine); blue: small intestine; green: duodenum.](public/paper-assets/frame3.gif)
+
 _Figure 5: Binary label showing the intestinal tract in a coronal view. Red: colon (large intestine); blue: small intestine; green: duodenum._
 
 # Example usage
