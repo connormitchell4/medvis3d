@@ -57,6 +57,15 @@ Key capabilities include:
 - Performance-aware rendering: a “High performance” toggle increases interactivity during camera motion and restores quality when idle.
 - Privacy: all data are processed locally; nothing is uploaded to a server.
 
+# Figures
+![Figure 1: Animated 3D camera orbit with axial slice overlay demonstrating volume and segmentation.](public/paper-assets/frame1.gif){#fig:anim-orbit width=80%}
+
+![Figure 2: Animated axial slice sweep with segmentation overlay in the 2D view.](public/paper-assets/frame2.gif){#fig:anim-slices width=80%}
+
+![Figure 3: Application UI showing the 2D slice viewer with probabilistic segmentation overlay.](public/paper-assets/web1.png){#fig:ui-2d width=80%}
+
+![Figure 4: 3D volume rendering with segmentation and optional axial slice plane.](public/paper-assets/web2.png){#fig:ui-3d width=80%}
+
 # Example usage
 
 Local development:

@@ -47,6 +47,24 @@ An in-browser medical volume and segmentation viewer for NIfTI datasets with 2D 
 
 ---
 
+### Screenshots and demos
+
+Below are short animations and screenshots showcasing the UI and rendering capabilities. Assets live under `public/paper-assets/` so they work locally and on the web.
+
+#### Animations
+
+![Animated 3D camera orbit with axial slice overlay](public/paper-assets/frame1.gif)
+
+![Animated axial slice sweep in the 2D view](public/paper-assets/frame2.gif)
+
+#### Screenshots
+
+![2D slice viewer with probabilistic segmentation overlay](public/paper-assets/web1.png)
+
+![3D volume rendering with segmentation and axial slice plane](public/paper-assets/web2.png)
+
+---
+
 ### Supported input and constraints
 
 - **Formats**: NIfTI `.nii` and `.nii.gz`.
