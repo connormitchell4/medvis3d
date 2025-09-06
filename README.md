@@ -62,11 +62,15 @@ Below are short animations and screenshots showcasing the UI and rendering capab
 ![3D volume rendering with segmentation and axial slice plane](public/paper-assets/web2.png)
 ---
 ### Animations
-#### 3D videos generated with the recorder (Intestinal tract and Liver)
+#### 3D videos generated with the recorder (intestinal tract and liver)
 ---
 ![Demo 1](public/paper-assets/frame1.gif)
 ---
 ![Demo 2](public/paper-assets/frame2.gif)
+
+---
+
+![Demo 3](public/paper-assets/frame3.gif)
 
 ---
 

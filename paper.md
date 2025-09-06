@@ -62,6 +62,8 @@ Key capabilities include:
 
 ![Figure 2: Animated axial slice sweep with segmentation overlay in the 2D view.](public/paper-assets/frame2.gif){#fig:anim-slices width=80%}
 
+![Figure 5: Animated coronal slice.](public/paper-assets/frame3.gif){#fig:anim-slices width=80%}
+
 ![Figure 3: Application UI showing the 2D slice viewer with probabilistic segmentation overlay.](public/paper-assets/web1.png){#fig:ui-2d width=80%}
 
 ![Figure 4: 3D volume rendering with segmentation and optional axial slice plane.](public/paper-assets/web2.png){#fig:ui-3d width=80%}
